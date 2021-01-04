@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-
+from sklearn.neighbors import KernelDensity
 
 # getPCA computes the eigenvalues and
 # eigenvector from given matrix
@@ -13,6 +13,28 @@ def getPCA(matrix):
     eVal = np.diagflat(eVal)
     
     return eVal, eVec
+
+def mpPDF(var, q, pts=1000):
+    # Marcenko-Pastur pdf
+    # q=T/N
+    eMin, eMax = var*(1-(1./q)**.5)**2, var*(1+(1./q)**.5)**2
+    eVal = np.linspace(eMin,eMax,pts)
+    pdf = q/(2*np.pi*var*eVal)*((eMax-eVal)*(eVal-eMin))**.5
+    pdf = pd.Series(pdf, index=eVal)
+    
+    return pdf
+
+def fitKDE(obs, bWidth=.25, kernel="gaussian", x=None):
+    # Fit kernel to a series of obs, and derive the prob of obs
+    # x is the array of values on which the fit KDE will be evaluated
+    if len(obs.shape)==1:obs=obs.reshape(-1,1)
+    kde=KernelDensity(kernel=kernel,bandwidth=bWidth).fit(obs)
+    if x is None:x=np.unique(obs).reshape(-1,1)
+    if len(x.shape)==1:x=x.reshape(-1,1)
+    logProb=kde.score_samples(x) # log(density)
+    pdf=pd.Series(np.exp(logProb),index=x.flatten())
+
+    return pdf
 
 def covariance(matrix):
     return np.cov(matrix)
