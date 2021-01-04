@@ -14,9 +14,9 @@ def getPCA(matrix):
     
     return eVal, eVec
 
-def mpPDF(var, q, pts=1000):
-    # Marcenko-Pastur pdf
-    # q=T/N
+def mpPDF(x, pts=1000):
+    var = np.var(x)
+    q = x.shape[0] / x.shape[1]
     eMin, eMax = var*(1-(1./q)**.5)**2, var*(1+(1./q)**.5)**2
     eVal = np.linspace(eMin,eMax,pts)
     pdf = q/(2*np.pi*var*eVal)*((eMax-eVal)*(eVal-eMin))**.5

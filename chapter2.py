@@ -19,8 +19,7 @@ if __name__ == "__main__":
 
     print(f"Punto2:\nA. the condition number of the correlation matrix is: {conditionNumber}")
 
-    x=np.random.normal(size=(10000,1000))
-    eVal0,eVec0=denoisingAndDetoning.getPCA(np.corrcoef(x,rowvar=0))
-    pdf1=denoisingAndDetoning.fitKDE(np.diag(eVal0),bWidth=.01) # empirical pdf
+    pdf0 = denoisingAndDetoning.mpPDF(data.to_numpy()) # theorical pdf
+    pdf1 = denoisingAndDetoning.fitKDE(np.diag(eVal)) # empirical pdf
     
-    print(pdf1)
+    print(np.sum((pdf0 - pdf1) **2))
