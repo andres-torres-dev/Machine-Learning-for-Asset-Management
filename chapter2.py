@@ -22,4 +22,5 @@ if __name__ == "__main__":
     x=np.random.normal(size=(10000,1000))
     eVal0,eVec0=denoisingAndDetoning.getPCA(np.corrcoef(x,rowvar=0))
     pdf1=denoisingAndDetoning.fitKDE(np.diag(eVal0),bWidth=.01) # empirical pdf
+    
     print(pdf1)
