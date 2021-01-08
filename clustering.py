@@ -54,13 +54,13 @@ class k_means_clustering:
     if self.search_number_of_clusters:
       for i in range(1, self.clusters+1):
         print("fitting for clusters: ", i)
-        centroids = self.runKMeans(i)
+        centroids = self.run_k_means(i)
         self.cost.append(self.compute_distortion(i, centroids))
       self.plot_costs()
     else:
-      return self.runKMeans(self.clusters)
+      return self.run_k_means(self.clusters)
   
-  def runKMeans(self, clusters):
+  def run_k_means(self, clusters):
      final_centroids =  np.zeros((clusters, self.data.shape[1]))
      for i in range(0, self.iterations):
        centroids = self.init_centroids(clusters)
