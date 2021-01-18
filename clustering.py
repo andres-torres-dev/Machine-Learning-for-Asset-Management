@@ -1,98 +1,44 @@
-import numpy as np
-import matplotlib.pyplot as plt
+import numpy as np,pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_samples
+
+# Compute the observation matrix
+# from a matrix of correlations using method (c)
+# where Xij = (1/2 (1- pij))^1/2
+# and pij is the correlation between observation i and j
+def observationMatrix(X):
+  X = 1 - X
+  X = X * 0.5
+  return np.sqrt(X)
+
+# For large matrices X, generally it is good practice to reduce its dimension via
+# PCA. The idea is to replace X with its standardized orthogonal projection onto a
+# lower-dimensional space, where the number of dimensions is given by the number
+# of eigenvalues in X’s correlation matrix that exceed λ þ (see Section 2). The
+# resulting observations matrix, X e , of size NxF, has a higher signal-to-noise ratio.
+#
+# s represents the number of values to be replaced
+def replaceStandarized(X, s):
+  return X[:, s:]
 
 
-class k_means_clustering:
-  def __init__(self, data, search_number_of_clusters=True, clusters=10, iterations=20):
-    self.search_number_of_clusters = search_number_of_clusters
-    if self.search_number_of_clusters:
-      self.cost = []
-    else:
-      self.cost = 0
-
-    self.clusters = clusters
-    
-    self.iterations = iterations
-    self.data = data
+def clusterKMeansBase(corr0, maxNumClusters=10,n_init=10):
+  x,silh=((1-corr0.fillna(0))/2.)**.5,pd.Series()# observations matrix
+  for init in range(n_init):
+    for i in range(2,maxNumClusters+1):
+      kmeans_=KMeans(n_clusters=i,n_jobs=1,n_init=1)
+      kmeans_=kmeans_.fit(x)
+      silh_=silhouette_samples(x,kmeans_.labels_)
+      stat=(silh_.mean()/silh_.std(),silh.mean()/silh.std())
+      if np.isnan(stat[1]) or stat[0]>stat[1]:
+        silh,kmeans=silh_,kmeans_
   
-  def init_centroids(self, clusters):
-    centroids = np.zeros((clusters, len(self.data[0,:])))
-    centroids_idx = np.random.choice(self.data.shape[0], clusters, replace=False)
-    for i, idx in enumerate(centroids_idx):
-      centroids[i, :] = self.data[idx]
-    
-    return centroids
+  newIdx=np.argsort(kmeans.labels_)
+  corr1=corr0.iloc[newIdx] # reorder rows
   
-  def find_closest_centroid(self, clusters, centroids):
-    m = self.data.shape[0]
-    idx = np.zeros((m,1),dtype=int)
-
-    for i in range(0, m):
-      idx[i] = 0
-      for d in range(0, clusters):
-        distance = np.sum(np.square(self.data[i,:] - centroids[d,:]))
-        if distance <= np.sum(np.square(self.data[i,:] - centroids[idx[i],:])):
-          idx[i] = d
-    
-    return idx
+  corr1=corr1.iloc[:,newIdx] # reorder columns
+  clstrs={i:corr0.columns[np.where(kmeans.labels_==i)[0]].tolist() \
+    for i in np.unique(kmeans.labels_) } # cluster members
+  silh=pd.Series(silh,index=x.index)
   
-  def compute_centroids(self, idx, clusters, centroids):
-    new_centroids = np.zeros((clusters, self.data.shape[1]))
-
-    for i in range(0, clusters):
-      cluster_idx = (idx == i) * 1
-      cluster_points = np.multiply(self.data, cluster_idx)
-      if np.sum(cluster_idx) > 0: 
-        tot = np.sum(cluster_idx)
-      else:
-        tot = 1
-      new_centroids[i, :] = (1/tot) * np.sum(cluster_points, 0)
-
-    return new_centroids
-
-  def fit(self):
-    if self.search_number_of_clusters:
-      for i in range(1, self.clusters+1):
-        print("fitting for clusters: ", i)
-        centroids = self.run_k_means(i)
-        self.cost.append(self.compute_distortion(i, centroids))
-      self.plot_costs()
-    else:
-      return self.run_k_means(self.clusters)
-  
-  def run_k_means(self, clusters):
-     final_centroids =  np.zeros((clusters, self.data.shape[1]))
-     for i in range(0, self.iterations):
-       centroids = self.init_centroids(clusters)
-       while True:
-         idx = self.find_closest_centroid(clusters, centroids)
-         new_centroids = self.compute_centroids(idx, clusters, centroids)
-         if np.array_equal(centroids, new_centroids):
-           centroids = new_centroids
-           break
-         else:
-           centroids = new_centroids
-
-       if self.compute_distortion(clusters, centroids) < self.compute_distortion(clusters, final_centroids):
-        final_centroids = centroids
-     
-     return final_centroids 
-
-  def compute_distortion(self, clusters, centroids):
-    m = self.data.shape[0]
-    idx = self.find_closest_centroid(clusters, centroids)
-
-    distortion = 0
-    for i in range(0, centroids.shape[0]):
-      cluster_idx = (idx == i) * 1
-      distortion += np.sum(np.multiply(np.square(self.data - centroids[i,:]), cluster_idx))
-
-    return (1/m) * distortion
-
-  def plot_costs(self):
-    fig = plt.figure(figsize=(20, 10))
-    plt.plot(np.arange(self.clusters)+1, self.cost, figure=fig)
-    plt.title('Algoritmo de K-Medias', fontsize=30)
-    plt.xlabel('Número de Clusters', fontsize=20)
-    plt.ylabel('Distorsión', fontsize=20)
-    plt.savefig('clusters-dist.png')
+  return corr1,clstrs,silh
